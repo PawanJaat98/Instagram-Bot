@@ -27,4 +27,5 @@ jobs:
           INSTA_PW: ${{ secrets.INSTA_PW }}
           STABILITY_KEY: ${{ secrets.STABILITY_KEY }}
           REPLICATE_KEY: ${{ secrets.REPLICATE_KEY }}
+          API_TOKEN: ${{secrets.API_TOKEN}}
         run: python main.py
