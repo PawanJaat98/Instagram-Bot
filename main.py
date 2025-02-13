@@ -3,88 +3,57 @@ import time
 import base64
 import random
 import os
+import replicate
 from dotenv import load_dotenv
 from instagrapi import Client
 from datetime import datetime
+
 load_dotenv()
+
 # Configuration
 GENRE = "cyberpunk cityscape"  # Change your desired theme here
 INSTA_USERNAME = os.environ.get('INSTA_USER')
 INSTA_PASSWORD = os.environ.get('INSTA_PW')
-STABILITY_KEY = os.environ.get('STABILITY_KEY')
+REPLICATE_API_TOKEN = os.environ.get('REPLICATE_KEY')
 
-# Stability.ai API endpoint
-# Switch to SDXL 1.0 (free tier compatible)
-STABILITY_API = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
+# Replicate SDXL Model
+REPLICATE_MODEL = "stability-ai/sdxl"
 
 # Validate environment variables
-if not all([INSTA_USERNAME, INSTA_PASSWORD, STABILITY_KEY]):
-    raise ValueError("Missing required environment variables: INSTA_USER, INSTA_PW, or STABILITY_KEY")
+if not all([INSTA_USERNAME, INSTA_PASSWORD, REPLICATE_API_TOKEN]):
+    raise ValueError("Missing required environment variables: INSTA_USER, INSTA_PW, or REPLICATE_KEY")
 
-# def generate_ai_image(prompt):
-#     headers = {
-#         "Authorization": f"Bearer {STABILITY_KEY}",
-#         "Accept": "application/json",
-       
-       
-#     }
-    
-#     # Correct JSON payload format
-#     form_data = {
-#         "prompt": (None, f"{prompt}, {GENRE}, 4k, trending on ArtStation"),
-#         "height": (None, "1024"),
-#         "width": (None, "1024"),
-#         "cfg_scale": (None, "7"),
-#         "steps": (None, "30"),
-#         "output_format": (None, "png")
-#     }
-
-#     response = requests.post(STABILITY_API, headers=headers, files=form_data)
 def generate_ai_image(prompt):
-    headers = {
-        "Authorization": f"Bearer {STABILITY_KEY}",
-        "Accept": "application/json",
-        "Content-Type": "application/json"  # Add this
-    }
+    """Generates an AI image using Replicate's SDXL model."""
+    os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
     
-    # Correct payload structure for SDXL 1.0
-    payload = {
-        "text_prompts": [
-            {
-                "text": f"{prompt}, {GENRE}, 4k, trending on ArtStation",
-                "weight": 0.5
+    try:
+        output = replicate.run(
+            REPLICATE_MODEL,
+            input={
+                "prompt": f"{prompt}, {GENRE}, 4K, trending on ArtStation",
+                "width": 1024,
+                "height": 1024
             }
-        ],
-        "cfg_scale": 7,
-        "height": 1024,
-        "width": 1024,
-        "steps": 30,
-        "samples": 1,
-        "style_preset": "digital-art"  # Add style preset
-    }
+        )
 
-    response = requests.post(STABILITY_API, headers=headers, json=payload) 
-    if response.status_code == 200:
-        json_data = response.json()
-        if "artifacts" in json_data:
-            # Stability AI returns base64-encoded image
-            image_data = json_data["artifacts"][0]["base64"]
-            return save_image(image_data)
-    print(f"Generation failed: {response.text}")
+        if output:
+            image_url = output[0]  # Replicate returns a URL
+            return save_image(image_url)
+    except Exception as e:
+        print(f"Generation failed: {e}")
+    
     return None
 
-def save_image(base64_str, filename="temp_post.jpg"):
-    """Decodes base64 image and saves it locally."""
-    image_bytes = base64.b64decode(base64_str)
+def save_image(image_url, filename="temp_post.jpg"):
+    """Downloads image from Replicate URL and saves it locally."""
+    img_data = requests.get(image_url).content
     with open(filename, "wb") as f:
-        f.write(image_bytes)
+        f.write(img_data)
     return filename
 
-
-    
-def post_to_instagram(image_path,caption):
+def post_to_instagram(image_path, caption):
     cl = Client()
-   
     
     # Load session if available
     session_file = "session.json"
@@ -100,8 +69,8 @@ def post_to_instagram(image_path,caption):
     cl.dump_settings(session_file)
 
     try:
-         cl.photo_upload(image_path, caption=caption)
-         print("Image posted successfully!")
+        cl.photo_upload(image_path, caption=caption)
+        print("Image posted successfully!")
     except Exception as e:
         print(f"Upload failed: {e}")
 
@@ -121,8 +90,7 @@ def main():
         print(f"Posted at {datetime.now()}")
 
 if __name__ == "__main__":
-        try:
-            main()
-        except Exception as e:
-            print(f"Error: {e} ye hai erroror")
-     
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {e}")
