@@ -121,9 +121,8 @@ def main():
         print(f"Posted at {datetime.now()}")
 
 if __name__ == "__main__":
-    while True:
         try:
             main()
         except Exception as e:
             print(f"Error: {e} ye hai erroror")
-        time.sleep(2 * 60 * 60)  # Wait 2 hours before posting again
+     
